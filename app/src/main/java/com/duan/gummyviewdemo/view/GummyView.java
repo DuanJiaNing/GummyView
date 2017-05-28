@@ -64,13 +64,13 @@ public class GummyView extends View {
             }
         });
 
-        gummy.setLot(32);
+        gummy.setLot(20);
         gummy.setColor(Color.BLUE);
 //        gummy.setAngleOffStart((float) (Math.PI / 4)); // 45 度
         gummy.setCenterX(550.0f);
         gummy.setCenterY(800.0f);
-        gummy.setOutLineLengthForAll(100.0f);
-        gummy.setRadius(250.0f);
+        gummy.setOutLineLengthForAll(120.0f);
+        gummy.setRadius(200.0f);
         gummy.setInnerLineLengthForAll(0.0f);
 
 //        gummy.setOutLineLength(0, new float[]{150.0f, 150.0f, -30.0f, 30.0f, 200.0f, 100.0f});
@@ -92,8 +92,8 @@ public class GummyView extends View {
         radiusAnim.setRepeatCount(ValueAnimator.INFINITE);
         radiusAnim.setRepeatMode(ValueAnimator.REVERSE);
 
-        float ol = 100.0f;
-        outLineLengthAnim = ObjectAnimator.ofFloat(ol, 0, ol);
+        float ol = 120.0f;
+        outLineLengthAnim = ObjectAnimator.ofFloat(ol, -ol, ol);
         outLineLengthAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
@@ -105,7 +105,7 @@ public class GummyView extends View {
         outLineLengthAnim.setRepeatMode(ValueAnimator.REVERSE);
 
         float il = 0.0f;
-        innerLineLengthAnim = ObjectAnimator.ofFloat(il, ra * 2, il);
+        innerLineLengthAnim = ObjectAnimator.ofFloat(il, ra * 2 * 2 , il);
         innerLineLengthAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
@@ -158,31 +158,32 @@ public class GummyView extends View {
         gummy.drawBeziers(canvas, paint, pos);
 
 
-        //绘制连接控制点的线
-        x0 = points[0][0];
-        y0 = points[0][1];
-        paint.setColor(Color.RED);
-        paint.setStrokeWidth(5.0f);
-        for (int i = 1; i < points.length; i++) {
-            x = points[i][0];
-            y = points[i][1];
-            canvas.drawLine(x0, y0, x, y, paint);
-            x0 = x;
-            y0 = y;
-        }
-
-        //绘制圆
-        paint.setColor(Color.BLACK);
-        paint.setAlpha(50); //要在 setColor 后调用，否则无效
-        canvas.drawCircle(gummy.getCenterX(), gummy.getCenterY(), gummy.getRadius(), paint);
-
-        //绘制过圆心的两条线
-        paint.setColor(Color.GRAY);
-        paint.setAlpha(100);
-        canvas.drawLine(gummy.getCenterX() - gummy.getRadius(), gummy.getCenterY(),
-                gummy.getCenterX() + gummy.getRadius(), gummy.getCenterY(), paint);
-        canvas.drawLine(gummy.getCenterX(), gummy.getCenterY() - gummy.getRadius(),
-                gummy.getCenterX(), gummy.getCenterY() + gummy.getRadius(), paint);
+//
+//        //绘制连接控制点的线
+//        x0 = points[0][0];
+//        y0 = points[0][1];
+//        paint.setColor(Color.RED);
+//        paint.setStrokeWidth(5.0f);
+//        for (int i = 1; i < points.length; i++) {
+//            x = points[i][0];
+//            y = points[i][1];
+//            canvas.drawLine(x0, y0, x, y, paint);
+//            x0 = x;
+//            y0 = y;
+//        }
+//
+//        //绘制圆
+//        paint.setColor(Color.BLACK);
+//        paint.setAlpha(50); //要在 setColor 后调用，否则无效
+//        canvas.drawCircle(gummy.getCenterX(), gummy.getCenterY(), gummy.getRadius(), paint);
+//
+//        //绘制过圆心的两条线
+//        paint.setColor(Color.GRAY);
+//        paint.setAlpha(100);
+//        canvas.drawLine(gummy.getCenterX() - gummy.getRadius(), gummy.getCenterY(),
+//                gummy.getCenterX() + gummy.getRadius(), gummy.getCenterY(), paint);
+//        canvas.drawLine(gummy.getCenterX(), gummy.getCenterY() - gummy.getRadius(),
+//                gummy.getCenterX(), gummy.getCenterY() + gummy.getRadius(), paint);
 
 
     }
@@ -197,7 +198,7 @@ public class GummyView extends View {
 
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             AnimatorSet set = new AnimatorSet();
-            set.setDuration(4000);
+            set.setDuration(8000);
             set.play(rotateAnim)
                     .with(colorAnim)
                     .with(radiusAnim)

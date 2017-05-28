@@ -69,7 +69,6 @@ public class Gummy {
      * 圆内线段的长度，该线段指的是每一 块 在圆内的两条线段的交点（圆内的两条线段始终相等），即该线段为圆的切线，其值分为如下两种情况：
      * 1 = radius：在圆上
      * 2 >= 0 且 < radius：此时这两条线段的交点位于圆上
-     * 该值不能大于 radius，无下限
      */
     private float[] innerPointDistanceFromCircleCenter;
 
@@ -447,15 +446,13 @@ public class Gummy {
     }
 
     public void setInnerLineLength(int index, float length) {
-        if (index < 0 || index >= innerPointDistanceFromCircleCenter.length || length > radius)
+        if (index < 0 || index >= innerPointDistanceFromCircleCenter.length)
             return;
         this.innerPointDistanceFromCircleCenter[index] = length;
         view.invalidate();
     }
 
     public void setInnerLineLengthForAll(float length) {
-        if (length > radius)
-            return;
 
         for (int i = 0; i < innerPointDistanceFromCircleCenter.length; i++) {
             innerPointDistanceFromCircleCenter[i] = length;
