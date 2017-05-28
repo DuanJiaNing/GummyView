@@ -7,3 +7,4 @@
 ![](https://raw.githubusercontent.com/DuanJiaNing/GummyView/master/screenshots.png)
 
 </div>
+<img src="https://raw.githubusercontent.com/DuanJiaNing/GummyView/master/screenshots.png"/>
