@@ -1,5 +1,8 @@
 package com.duan.gummyviewdemo.view;
 
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -11,6 +14,9 @@ import android.support.annotation.RequiresApi;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.OvershootInterpolator;
+import android.view.animation.RotateAnimation;
 
 import com.duan.gummyviewdemo.bezier.BezierImpl;
 
@@ -24,15 +30,101 @@ public class GummyView extends View {
 
     private Gummy gummy;
 
-    private BezierOctopus bezier;
+    private ValueAnimator rotateAnim;
 
-    private float[][] points;
+    private ValueAnimator colorAnim;
+
+    private ValueAnimator radiusAnim;
+
+    private ValueAnimator outLineLengthAnim;
+
+    private ValueAnimator innerLineLengthAnim;
 
     {
         paint = new Paint();
         paint.setAntiAlias(true);
-        gummy = new Gummy(this);
-        bezier = new BezierOctopus();
+        gummy = new Gummy(this, new BezierImpl());
+        gummy.setOnDrawBezier(new Gummy.OnDrawBezier() {
+            Path path = new Path();
+
+            @Override
+            public void drawBezier(Canvas canvas, Paint paint, float[][] points) {
+                paint.setColor(gummy.getColor());
+                paint.setStrokeWidth(10.0f);
+
+                float x, y;
+                path.reset();
+                path.moveTo(points[0][0], points[0][1]);
+                for (int i = 1; i < points.length; i++) {
+                    x = points[i][0];
+                    y = points[i][1];
+                    path.lineTo(x, y);
+                }
+                canvas.drawPath(path, paint);
+            }
+        });
+
+        gummy.setLot(32);
+        gummy.setColor(Color.BLUE);
+//        gummy.setAngleOffStart((float) (Math.PI / 4)); // 45 度
+        gummy.setCenterX(550.0f);
+        gummy.setCenterY(800.0f);
+        gummy.setOutLineLengthForAll(100.0f);
+        gummy.setRadius(250.0f);
+        gummy.setInnerLineLengthForAll(0.0f);
+
+//        gummy.setOutLineLength(0, new float[]{150.0f, 150.0f, -30.0f, 30.0f, 200.0f, 100.0f});
+//        gummy.setAngle(Math.PI / 2, 0);
+
+
+        rotateAnim = ObjectAnimator.ofFloat(gummy, "angleOffStart", 0, (float) Math.PI * 2);
+        rotateAnim.setRepeatCount(ValueAnimator.INFINITE);
+        rotateAnim.setRepeatMode(ValueAnimator.REVERSE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            colorAnim = ObjectAnimator.ofArgb(gummy, "color", Color.BLUE, Color.GREEN, Color.BLACK);
+            colorAnim.setRepeatCount(ValueAnimator.INFINITE);
+            colorAnim.setRepeatMode(ValueAnimator.REVERSE);
+        }
+
+        float ra = gummy.getRadius();
+        radiusAnim = ObjectAnimator.ofFloat(gummy, "radius", ra, ra * 2, ra);
+        radiusAnim.setRepeatCount(ValueAnimator.INFINITE);
+        radiusAnim.setRepeatMode(ValueAnimator.REVERSE);
+
+        float ol = 100.0f;
+        outLineLengthAnim = ObjectAnimator.ofFloat(ol, 0, ol);
+        outLineLengthAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                float f = (float) animation.getAnimatedValue();
+                gummy.setOutLineLengthForAll(f);
+            }
+        });
+        outLineLengthAnim.setRepeatCount(ValueAnimator.INFINITE);
+        outLineLengthAnim.setRepeatMode(ValueAnimator.REVERSE);
+
+        float il = 0.0f;
+        innerLineLengthAnim = ObjectAnimator.ofFloat(il, ra * 2, il);
+        innerLineLengthAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                float f = (float) animation.getAnimatedValue();
+                gummy.setInnerLineLengthForAll(f);
+            }
+        });
+        innerLineLengthAnim.setRepeatCount(ValueAnimator.INFINITE);
+        innerLineLengthAnim.setRepeatMode(ValueAnimator.REVERSE);
+
+
+//        rotateAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+//            @Override
+//            public void onAnimationUpdate(ValueAnimator animation) {
+//                float v = (float) animation.getAnimatedValue();
+//                gummy.setAngleOffStart(v);
+//            }
+//        });
+
     }
 
     public GummyView(Context context) {
@@ -54,67 +146,43 @@ public class GummyView extends View {
 
 
     @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-    }
-
-    @Override
-    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        super.onLayout(changed, left, top, right, bottom);
-
-        gummy.setLot(16);
-        gummy.setColor(Color.BLUE);
-//        octopus.setAngleOffStart(Math.PI / 4); // 45 度
-        gummy.setCenterX(350.0f);
-        gummy.setCenterY(500.0f);
-        gummy.setOutLineLengthForAll(60.0f);
-        gummy.setRadius(150.0f);
-
-//        octopus.setOutLineLength(0, new float[]{150.0f, 150.0f, -30.0f, 30.0f, 200.0f, 100.0f});
-//        octopus.setAngle(Math.PI / 2, 0);
-
-        //计算“章鱼”的各个折点坐标
-        points = gummy.calcuCoordinates();
-
-    }
-
-    @Override
     protected void onDraw(Canvas canvas) {
 
         float x0, y0, x, y;
-//
-//        //画圆
-//        paint.setColor(Color.GRAY);
-//        canvas.drawCircle(octopus.getCenterX(), octopus.getCenterY(), octopus.getRadius(), paint);
-//
-//        //画过圆心的两条线
-//        paint.setColor(Color.WHITE);
-//        canvas.drawLine(octopus.getCenterX() - octopus.getRadius(), octopus.getCenterY(),
-//                octopus.getCenterX() + octopus.getRadius(), octopus.getCenterY(), paint);
-//        canvas.drawLine(octopus.getCenterX(), octopus.getCenterY() - octopus.getRadius(),
-//                octopus.getCenterX(), octopus.getCenterY() + octopus.getRadius(), paint);
-//
-//        paint.setColor(Color.BLACK);
-//        paint.setStrokeWidth(3.0f);
-//        for (int i = 0; i < points.length; i++) {
-//            canvas.drawCircle(points[i][0], points[i][1], 5, paint);
-//        }
-//
 
-//        x0 = lines[0][0];
-//        y0 = lines[0][1];
-//        for (int i = 1; i < lines.length; i++) {
-//            x = lines[i][0];
-//            y = lines[i][1];
-//            canvas.drawLine(x0, y0, x, y, paint);
-//            x0 = x;
-//            y0 = y;
-//        }
+        //计算出所有的控制点
+        float[][] points = gummy.calcuCoordinates();
 
-        //画贝塞尔曲线
+        //计算出贝塞尔曲线上的点并绘制
+        float[][] pos = gummy.calcuBeziers(points, 200);
+        gummy.drawBeziers(canvas, paint, pos);
 
-        paint.setColor(gummy.getColor());
-        bezier.drawBeziers(canvas, paint, points);
+
+        //绘制连接控制点的线
+        x0 = points[0][0];
+        y0 = points[0][1];
+        paint.setColor(Color.RED);
+        paint.setStrokeWidth(5.0f);
+        for (int i = 1; i < points.length; i++) {
+            x = points[i][0];
+            y = points[i][1];
+            canvas.drawLine(x0, y0, x, y, paint);
+            x0 = x;
+            y0 = y;
+        }
+
+        //绘制圆
+        paint.setColor(Color.BLACK);
+        paint.setAlpha(50); //要在 setColor 后调用，否则无效
+        canvas.drawCircle(gummy.getCenterX(), gummy.getCenterY(), gummy.getRadius(), paint);
+
+        //绘制过圆心的两条线
+        paint.setColor(Color.GRAY);
+        paint.setAlpha(100);
+        canvas.drawLine(gummy.getCenterX() - gummy.getRadius(), gummy.getCenterY(),
+                gummy.getCenterX() + gummy.getRadius(), gummy.getCenterY(), paint);
+        canvas.drawLine(gummy.getCenterX(), gummy.getCenterY() - gummy.getRadius(),
+                gummy.getCenterX(), gummy.getCenterY() + gummy.getRadius(), paint);
 
 
     }
@@ -127,102 +195,50 @@ public class GummyView extends View {
         float x = event.getX();
         float y = event.getY();
 
-        switch (event.getAction()) {
-            case MotionEvent.ACTION_DOWN: {
-                float ra = 30;
-                float re = 0.00001f;
-
-                which = -1;
-                float cx, cy;
-                for (int i = 0; i < points.length; i++) {
-                    cx = points[i][0];
-                    cy = points[i][1];
-
-                    if (x - (cx - ra) > re && x - (cx + ra) < re
-                            && y - (cy - ra) > re && y - (cy + ra) < re) {
-                        which = i;
-                        break;
-                    }
-                }
-                break;
-            }
-            case MotionEvent.ACTION_UP:
-                which = -1;
-            default:
-                if (which != -1) {
-                    points[which][0] = x;
-                    points[which][1] = y;
-                    invalidate();
-                }
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            AnimatorSet set = new AnimatorSet();
+            set.setDuration(4000);
+            set.play(rotateAnim)
+                    .with(colorAnim)
+                    .with(radiusAnim)
+                    .with(outLineLengthAnim)
+                    .with(innerLineLengthAnim);
+            set.start();
+            return false;
         }
 
-
+//
+//        switch (event.getAction()) {
+//            case MotionEvent.ACTION_DOWN: {
+//                float ra = 30;
+//                float re = 0.00001f;
+//
+//                which = -1;
+//                float cx, cy;
+//                for (int i = 0; i < points.length; i++) {
+//                    cx = points[i][0];
+//                    cy = points[i][1];
+//
+//                    if (x - (cx - ra) > re && x - (cx + ra) < re
+//                            && y - (cy - ra) > re && y - (cy + ra) < re) {
+//                        which = i;
+//                        break;
+//                    }
+//                }
+//                break;
+//            }
+//            case MotionEvent.ACTION_UP:
+//                which = -1;
+//            default:
+//                if (which != -1) {
+//                    points[which][0] = x;
+//                    points[which][1] = y;
+//                    invalidate();
+//                }
+//        }
+//
+//
         return true;
-    }
-
-
-    private class BezierOctopus extends BezierImpl {
-
-        //分段绘制贝塞尔曲线，如果直接用所有点作为控制点绘制会导致起点和终点无法自然闭合
-        public void drawBeziers(Canvas canvas, Paint paint, float[][] points) {
-
-            int count = points.length;
-
-            //绘制次数（ 块 数）
-            int rest = gummy.getDiv();
-
-            // 定位到第一个 圆外两点之间的点 ，即第五个点。
-            //选择 圆外两点之间的点 到相邻的 圆外两点之间的点 作为一次绘制单位
-            int curPoint = 4;
-
-            //一次绘制9个点（9个控制点）
-            int drawOfTime = 9;
-
-            path.moveTo(points[curPoint][0], points[curPoint][1]);
-
-            while (rest != 0) {
-
-                float[][] curDraw = new float[9][2];
-                for (int i = 0; i < drawOfTime; i++) {
-                    if (curPoint == count - 1)
-                        curPoint = 0;
-                    curDraw[i] = points[curPoint];
-                    curPoint++;
-                }
-                //下一次绘制时起点往前移一个
-                curPoint--;
-                drawBezier(paint, canvas, curDraw);
-
-                rest--;
-            }
-
-//            path.close();
-            canvas.drawPath(path, paint);
-
-        }
-
-        /**
-         * 绘制贝塞尔曲线（控制点数不限）
-         */
-        private Path path = new Path();
-
-        private void drawBezier(Paint paint, Canvas canvas, float[][] controlPoints) {
-            float x0, y0, x, y;
-            int precision = 200;
-            float[][] ps = calculate(controlPoints, precision);
-//            x0 = ps[0][0];
-//            y0 = ps[0][1];
-            for (int i = 1; i < ps.length; i++) {
-                x = ps[i][0];
-                y = ps[i][1];
-                path.lineTo(x, y);
-//                canvas.drawLine(x0, y0, x, y, paint);
-//                x0 = x;
-//                y0 = y;
-            }
-
-        }
-
     }
 
 }

@@ -1,5 +1,9 @@
 package com.duan.gummyviewdemo.bezier;
 
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Path;
+
 /**
  * Created by DuanJiaNing on 2017/5/27.
  */
@@ -66,8 +70,8 @@ public class BezierImpl implements IBezier {
         //贝塞尔曲线控制点数（阶数）
         int number = poss.length;
 
-        //控制点数不小于 2 ，至少为二维坐标系，精度不能小于 5
-        if (number < 2 || dimersion < 2 || precision < 5)
+        //控制点数不小于 2 ，至少为二维坐标系
+        if (number < 2 || dimersion < 2)
             return null;
 
         float[][] result = new float[precision][dimersion];
@@ -102,6 +106,5 @@ public class BezierImpl implements IBezier {
 
         return result;
     }
-
 
 }

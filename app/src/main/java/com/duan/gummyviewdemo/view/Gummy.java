@@ -1,9 +1,13 @@
 package com.duan.gummyviewdemo.view;
 
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.support.annotation.ColorInt;
 import android.support.annotation.FloatRange;
 import android.view.View;
+
+import com.duan.gummyviewdemo.bezier.IBezier;
 
 /**
  * Created by DuanJiaNing on 2017/5/27.
@@ -61,6 +65,14 @@ public class Gummy {
      */
     private float[] outPointDistanceFromCircleBorder;
 
+    /**
+     * 圆内线段的长度，该线段指的是每一 块 在圆内的两条线段的交点（圆内的两条线段始终相等），即该线段为圆的切线，其值分为如下两种情况：
+     * 1 = radius：在圆上
+     * 2 >= 0 且 < radius：此时这两条线段的交点位于圆上
+     * 该值不能大于 radius，无下限
+     */
+    private float[] innerPointDistanceFromCircleCenter;
+
     private float defaultOutLineLength = 50.0f;
 
     /**
@@ -68,7 +80,21 @@ public class Gummy {
      */
     private int div;
 
-    public Gummy(View view) {
+    public interface OnDrawBezier {
+        /**
+         * 绘制贝塞尔曲线
+         *
+         * @param points 贝塞尔曲线上的点
+         */
+        void drawBezier(Canvas canvas, Paint paint, float[][] points);
+    }
+
+    private OnDrawBezier mOnDrawBezier;
+
+    private IBezier mBezier;
+
+    public Gummy(View view, IBezier bezier) {
+        this.mBezier = bezier;
         this.view = view;
         this.lot = 8;
         this.radius = 50.0f;
@@ -93,6 +119,13 @@ public class Gummy {
         for (int i = 0; i < outPointDistanceFromCircleBorder.length; i++) {
             outPointDistanceFromCircleBorder[i] = defaultOutLineLength;
         }
+
+        //注意：别忘了终点
+        innerPointDistanceFromCircleCenter = new float[lot / 4 + 1];
+        for (int i = 0; i < innerPointDistanceFromCircleCenter.length; i++) {
+            innerPointDistanceFromCircleCenter[i] = 0;
+        }
+
 
         this.div = lot / 4;
 
@@ -124,14 +157,14 @@ public class Gummy {
 
         //当前计算到的块
         int currDiv = 0;
+
         int currOutLine = 0;
 
         for (int i = 0; i < pointNum; i++) {
             double angle = cacluAngle(currentCoordinate, currDiv);
             switch (currentCoordinate) {
                 case 1:
-                    result[i][0] = centerX;
-                    result[i][1] = centerY;
+                    result[i] = cacluNode(angle, innerPointDistanceFromCircleCenter[currDiv]);
                     currentCoordinate++;
                     break;
                 case 2:
@@ -226,13 +259,25 @@ public class Gummy {
 
         //已经跨过的 块 数
         int so = currDiv * 4;
+        int i;
         switch (currentCoordinate) {
+            case 1:
+                if (so == 0) {
+                    angle += (2 * Math.PI - angles[lot - 1]) + angles[lot - 1] / 2;
+                    break;
+                }
+
+                for (i = 0; i < so - 1; i++) {
+                    angle += angles[i];
+                }
+                angle += angles[i] / 2;
+                break;
             case 2:
                 if (so == 0) {
                     break;
                 }
 
-                for (int i = 0; i < so; i++) {
+                for (i = 0; i < so; i++) {
                     angle += angles[i];
                 }
                 break;
@@ -243,7 +288,7 @@ public class Gummy {
                     break;
                 }
 
-                for (int i = 0; i < so + 1; i++) {
+                for (i = 0; i < so + 1; i++) {
                     angle += angles[i];
                 }
                 break;
@@ -253,7 +298,7 @@ public class Gummy {
                     break;
                 }
 
-                for (int i = 0; i < so + 1; i++) {
+                for (i = 0; i < so + 1; i++) {
                     angle += angles[i];
                 }
                 angle += angles[so + 1] / 2;
@@ -265,7 +310,7 @@ public class Gummy {
                     break;
                 }
 
-                for (int i = 0; i < so + 2; i++) {
+                for (i = 0; i < so + 2; i++) {
                     angle += angles[i];
                 }
                 break;
@@ -275,7 +320,7 @@ public class Gummy {
                     break;
                 }
 
-                for (int i = 0; i < so + 3; i++) {
+                for (i = 0; i < so + 3; i++) {
                     angle += angles[i];
                 }
                 break;
@@ -304,7 +349,7 @@ public class Gummy {
      *
      * @param angleOffStart
      */
-    public void setAngleOffStart(double angleOffStart) {
+    public void setAngleOffStart(float angleOffStart) {
         this.angleOffStart = angleOffStart;
         view.invalidate();
     }
@@ -314,10 +359,14 @@ public class Gummy {
      * 此方法应谨慎调用，当你重新设定 lot 值，则你之前设置的 angles 和 outPointDistanceFromCircleBorder 都将被重置，可以通过调用
      * {@link com.duan.gummyviewdemo.view.Gummy#addLot(int)} 和 {@link com.duan.gummyviewdemo.view.Gummy#removeLot(int)} 方法避免属性全部被重置
      *
-     * @param lot 份数，如果该值不是 4 的倍数或者小于 8，该方法将无效
+     * @param lot 份数，该值不能小于 8 ，且应该为 4 的倍数，当不是 4 的倍数时，将递增该值并取最近的能被 4 整除的数
      */
     public void setLot(int lot) {
-        if (this.lot != lot && lot % 4 == 0 && lot >= 8) {
+        if (this.lot != lot && lot >= 8) {
+            if (lot % 4 != 0) {
+                while (lot % 4 != 0)
+                    lot++;
+            }
             this.lot = lot;
             reset(lot);
         }
@@ -397,6 +446,25 @@ public class Gummy {
         view.invalidate();
     }
 
+    public void setInnerLineLength(int index, float length) {
+        if (index < 0 || index >= innerPointDistanceFromCircleCenter.length || length > radius)
+            return;
+        this.innerPointDistanceFromCircleCenter[index] = length;
+        view.invalidate();
+    }
+
+    public void setInnerLineLengthForAll(float length) {
+        if (length > radius)
+            return;
+
+        for (int i = 0; i < innerPointDistanceFromCircleCenter.length; i++) {
+            innerPointDistanceFromCircleCenter[i] = length;
+        }
+        view.invalidate();
+    }
+
+    //TODO 增加 setInnerLineLength(int startOffSet, float[] lengths) 方法
+
     public void setCenterX(float centerX) {
         this.centerX = centerX;
         view.invalidate();
@@ -439,6 +507,76 @@ public class Gummy {
 
     }
 
+    public void setOnDrawBezier(OnDrawBezier mOnDrawBezier) {
+        this.mOnDrawBezier = mOnDrawBezier;
+    }
+
+
+    /**
+     * 计算贝塞尔曲线上的坐标点
+     *
+     * @param precision 精度，期望绘制的贝塞尔曲线上的坐标点数，该值越大贝塞尔曲线越光滑，但计算量也会更大,
+     *                  注意：该值并不会直接决定{@link com.duan.gummyviewdemo.view.Gummy.OnDrawBezier#drawBezier(Canvas, Paint, float[][])}中传入的坐标点数目，理应为大于或者等于
+     * @param points    所有的控制点坐标，你可以由{@link Gummy#calcuCoordinates()}方法计算得到该值。
+     */
+    //分段绘制贝塞尔曲线，如果直接用所有点作为控制点绘制会导致起点和终点无法自然闭合
+    public float[][] calcuBeziers(float[][] points, int precision) {
+
+        int count = points.length;
+
+        //计算次数（ 块 数）
+        int rest = getDiv();
+
+        // 定位到第一个 圆外两点之间的点 ，即第五个点。
+        //选择 圆外两点之间的点 到相邻的 圆外两点之间的点 作为一次计算单位
+        int curPoint = 4;
+
+        //一次计算9个点（9个控制点）
+        int calcuOfTime = 9;
+
+        // 9 个控制点对应计算得的贝塞尔曲线上的点数
+        int r = 0;
+        int countOfTime = precision % getDiv() == 0 ? precision / getDiv() : precision / getDiv() + 1;
+        float[][] result = new float[countOfTime * getDiv()][2];
+
+
+        while (rest != 0) {
+
+            float[][] curCalcu = new float[calcuOfTime][2];
+            for (int i = 0; i < calcuOfTime; i++) {
+                if (curPoint == count - 1)
+                    curPoint = 0;
+                curCalcu[i] = points[curPoint];
+                curPoint++;
+            }
+            //下一次绘制时起点往前移一个
+            curPoint--;
+
+            float[][] ps = mBezier.calculate(curCalcu, countOfTime);
+            for (int i = 0; i < countOfTime; i++) {
+                result[r] = ps[i];
+                r++;
+            }
+
+            rest--;
+        }
+
+        //让首尾相连
+        result[result.length - 1] = result[0];
+
+
+        return result;
+
+    }
+
+    /**
+     * 绘制贝塞尔曲线
+     *
+     * @param points 所有的控制点坐标，你可以由{@link Gummy#calcuBeziers(float[][], int)}方法计算得到该值。
+     */
+    public void drawBeziers(Canvas canvas, Paint paint, float[][] points) {
+        mOnDrawBezier.drawBezier(canvas, paint, points);
+    }
 
     public float getCenterX() {
         return centerX;
