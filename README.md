@@ -2,9 +2,7 @@
 
 ![](https://raw.githubusercontent.com/DuanJiaNing/GummyView/master/screenshots.png)
 <div>
-![](https://raw.githubusercontent.com/DuanJiaNing/GummyView/master/screenshots.png)
-![](https://raw.githubusercontent.com/DuanJiaNing/GummyView/master/screenshots.png)
-![](https://raw.githubusercontent.com/DuanJiaNing/GummyView/master/screenshots.png)
-
+<img src="https://raw.githubusercontent.com/DuanJiaNing/GummyView/master/gummy_01.gif"/>
+<img src="https://raw.githubusercontent.com/DuanJiaNing/GummyView/master/gummy_02.gif"/>
+<img src="https://raw.githubusercontent.com/DuanJiaNing/GummyView/master/gummy_03.gif"/>
 </div>
-<img src="https://raw.githubusercontent.com/DuanJiaNing/GummyView/master/screenshots.png"/>
