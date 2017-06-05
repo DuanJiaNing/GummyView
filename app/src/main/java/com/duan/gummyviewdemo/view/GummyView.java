@@ -119,9 +119,14 @@ public class GummyView extends View {
         //计算出所有的控制点
         float[][] points = mGummy.calcuCoordinates();
 
+        canvas.save();
+        canvas.rotate((float) Math.toRadians(mGummy.getAngleOffStart()));
+
         //计算出贝塞尔曲线上的点并使用默认的绘制方法绘制
         float[][] pos = mGummy.calcuBeziers(points, 200);
         mGummy.drawBeziers(canvas, mPaint, pos);
+
+        canvas.restore();
 
 //
 //        //绘制连接控制点的线
