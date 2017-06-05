@@ -1,8 +1,10 @@
 package com.duan.gummyviewdemo.view;
 
+import android.animation.ValueAnimator;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.support.annotation.ColorInt;
 import android.support.annotation.FloatRange;
 import android.view.View;
@@ -50,6 +52,8 @@ public class Gummy {
      * 8.第四个在圆上的点 p4
      */
     private int lot;
+    private final int defaultLot = 8;
+    private final int minLot = 4;
 
     /**
      * 保存每一份的角度大小，和应等于 2PI
@@ -79,6 +83,13 @@ public class Gummy {
      */
     private int div;
 
+    /**
+     * 1. 如果你想在直接继承自 View 的控件中使用属性动画需要打开该开关
+     * 2.如果你想在继承自 SurfaceView 的控件中使用属性动画需要关闭该开关，使用{@link ValueAnimator#addUpdateListener(ValueAnimator.AnimatorUpdateListener)}方法添加监听，
+     * 并在回调中更新对象的属性并手动刷新。
+     */
+    private boolean autoInvalidateWhenAnim = false;
+
     public interface OnDrawBezier {
         /**
          * 绘制贝塞尔曲线
@@ -88,14 +99,32 @@ public class Gummy {
         void drawBezier(Canvas canvas, Paint paint, float[][] points);
     }
 
-    private OnDrawBezier mOnDrawBezier;
+    private OnDrawBezier mOnDrawBezier = new OnDrawBezier() {
+        Path path = new Path();
+
+        @Override
+        public void drawBezier(Canvas canvas, Paint paint, float[][] points) {
+            paint.setColor(getColor());
+            paint.setStrokeWidth(10.0f);
+
+            float x, y;
+            path.reset();
+            path.moveTo(points[0][0], points[0][1]);
+            for (int i = 1; i < points.length; i++) {
+                x = points[i][0];
+                y = points[i][1];
+                path.lineTo(x, y);
+            }
+            canvas.drawPath(path, paint);
+        }
+    };
 
     private IBezier mBezier;
 
     public Gummy(View view, IBezier bezier) {
         this.mBezier = bezier;
         this.view = view;
-        this.lot = 8;
+        this.lot = defaultLot;
         this.radius = 50.0f;
         reset(lot);
     }
@@ -128,7 +157,8 @@ public class Gummy {
 
         this.div = lot / 4;
 
-        view.invalidate();
+        if (autoInvalidateWhenAnim)
+            view.invalidate();
     }
 
     /**
@@ -195,12 +225,6 @@ public class Gummy {
                     currentCoordinate = 1;
                     break;
             }
-//                Log.i("main", "calcuCoordinates: " + i
-//                        + "\n(" + result[i][0] + "," + result[i][1] + ")"
-//                        + "\nangle=" + angle
-//                        + "\ncurrDiv=" + currDiv
-//                        + "\ncurrentCoordinate=" + currentCoordinate
-//                );
         }
 
         return result;
@@ -219,7 +243,7 @@ public class Gummy {
      * x - a = r * cosα
      * y - b = r * sinα
      *
-     * @param anglesSum         由 {@link com.duan.gummyviewdemo.view.Gummy#cacluAngle(int, int)} 方法计算得到
+     * @param anglesSum         由 {@link #cacluAngle(int, int)} 方法计算得到
      * @param distanceOffCenter 离圆心的距离
      * @return
      */
@@ -350,18 +374,19 @@ public class Gummy {
      */
     public void setAngleOffStart(float angleOffStart) {
         this.angleOffStart = angleOffStart;
-        view.invalidate();
+        if (autoInvalidateWhenAnim)
+            view.invalidate();
     }
 
     /**
      * 默认平均分割圆
      * 此方法应谨慎调用，当你重新设定 lot 值，则你之前设置的 angles 和 outPointDistanceFromCircleBorder 都将被重置，可以通过调用
-     * {@link com.duan.gummyviewdemo.view.Gummy#addLot(int)} 和 {@link com.duan.gummyviewdemo.view.Gummy#removeLot(int)} 方法避免属性全部被重置
+     * {@link #addLot(int)} 和 {@link #removeLot(int)} 方法避免属性全部被重置
      *
      * @param lot 份数，该值不能小于 8 ，且应该为 4 的倍数，当不是 4 的倍数时，将递增该值并取最近的能被 4 整除的数
      */
     public void setLot(int lot) {
-        if (this.lot != lot && lot >= 8) {
+        if (this.lot != lot && lot >= minLot) {
             if (lot % 4 != 0) {
                 while (lot % 4 != 0)
                     lot++;
@@ -373,12 +398,14 @@ public class Gummy {
 
     public void setAlpha(@FloatRange(from = 0.0, to = 1.0) float alpha) {
         this.alpha = alpha;
-        view.invalidate();
+        if (autoInvalidateWhenAnim)
+            view.invalidate();
     }
 
     public void setColor(@ColorInt int color) {
         this.color = color;
-        view.invalidate();
+        if (autoInvalidateWhenAnim)
+            view.invalidate();
     }
 
     /**
@@ -388,7 +415,8 @@ public class Gummy {
      */
     public void setRadius(float radius) {
         this.radius = radius;
-        view.invalidate();
+        if (autoInvalidateWhenAnim)
+            view.invalidate();
     }
 
     /**
@@ -416,8 +444,8 @@ public class Gummy {
                 outPointDistanceFromCircleBorder[i] = lengths[s++];
             }
         }
-
-        view.invalidate();
+        if (autoInvalidateWhenAnim)
+            view.invalidate();
     }
 
     /**
@@ -430,7 +458,8 @@ public class Gummy {
         if (index < 0 || index >= outPointDistanceFromCircleBorder.length)
             return;
         this.outPointDistanceFromCircleBorder[index] = length;
-        view.invalidate();
+        if (autoInvalidateWhenAnim)
+            view.invalidate();
     }
 
     /**
@@ -442,14 +471,16 @@ public class Gummy {
         for (int i = 0; i < outPointDistanceFromCircleBorder.length; i++) {
             outPointDistanceFromCircleBorder[i] = length;
         }
-        view.invalidate();
+        if (autoInvalidateWhenAnim)
+            view.invalidate();
     }
 
     public void setInnerLineLength(int index, float length) {
         if (index < 0 || index >= innerPointDistanceFromCircleCenter.length)
             return;
         this.innerPointDistanceFromCircleCenter[index] = length;
-        view.invalidate();
+        if (autoInvalidateWhenAnim)
+            view.invalidate();
     }
 
     public void setInnerLineLengthForAll(float length) {
@@ -457,19 +488,22 @@ public class Gummy {
         for (int i = 0; i < innerPointDistanceFromCircleCenter.length; i++) {
             innerPointDistanceFromCircleCenter[i] = length;
         }
-        view.invalidate();
+        if (autoInvalidateWhenAnim)
+            view.invalidate();
     }
 
     //TODO 增加 setInnerLineLength(int startOffSet, float[] lengths) 方法
 
     public void setCenterX(float centerX) {
         this.centerX = centerX;
-        view.invalidate();
+        if (autoInvalidateWhenAnim)
+            view.invalidate();
     }
 
     public void setCenterY(float centerY) {
         this.centerY = centerY;
-        view.invalidate();
+        if (autoInvalidateWhenAnim)
+            view.invalidate();
     }
 
     /**
@@ -499,8 +533,8 @@ public class Gummy {
                     angles[i] += e;
             }
         }
-
-        view.invalidate();
+        if (autoInvalidateWhenAnim)
+            view.invalidate();
 
     }
 
@@ -509,12 +543,17 @@ public class Gummy {
     }
 
 
+    public void setAutoInvalidateWhenAnim(boolean autoInvalidateWhenAnim) {
+        this.autoInvalidateWhenAnim = autoInvalidateWhenAnim;
+    }
+
+
     /**
      * 计算贝塞尔曲线上的坐标点
      *
      * @param precision 精度，期望绘制的贝塞尔曲线上的坐标点数，该值越大贝塞尔曲线越光滑，但计算量也会更大,
-     *                  注意：该值并不会直接决定{@link com.duan.gummyviewdemo.view.Gummy.OnDrawBezier#drawBezier(Canvas, Paint, float[][])}中传入的坐标点数目，理应为大于或者等于
-     * @param points    所有的控制点坐标，你可以由{@link Gummy#calcuCoordinates()}方法计算得到该值。
+     *                  注意：该值并不会直接决定{@link OnDrawBezier#drawBezier(Canvas, Paint, float[][])}中传入的坐标点数目，理应为大于或者等于
+     * @param points    所有的控制点坐标，你可以由{@link #calcuCoordinates()}方法计算得到该值。
      */
     //分段绘制贝塞尔曲线，如果直接用所有点作为控制点绘制会导致起点和终点无法自然闭合
     public float[][] calcuBeziers(float[][] points, int precision) {
@@ -569,7 +608,7 @@ public class Gummy {
     /**
      * 绘制贝塞尔曲线
      *
-     * @param points 所有的控制点坐标，你可以由{@link Gummy#calcuBeziers(float[][], int)}方法计算得到该值。
+     * @param points 所有的控制点坐标，你可以由{@link #calcuBeziers(float[][], int)}方法计算得到该值。
      */
     public void drawBeziers(Canvas canvas, Paint paint, float[][] points) {
         mOnDrawBezier.drawBezier(canvas, paint, points);

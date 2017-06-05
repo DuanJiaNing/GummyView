@@ -1,9 +1,5 @@
 package com.duan.gummyviewdemo.bezier;
 
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Path;
-
 /**
  * Created by DuanJiaNing on 2017/5/27.
  */

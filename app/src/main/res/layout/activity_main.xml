@@ -4,9 +4,16 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:gravity="center"
     tools:context="com.duan.gummyviewdemo.MainActivity">
 
     <com.duan.gummyviewdemo.view.GummyView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:id="@+id/gummySurfaceView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:lot="24"
+        app:color="#56d7ed"
+        app:outPointDistance="18dp"
+        app:radius="95dp"
+        />
 </LinearLayout>
